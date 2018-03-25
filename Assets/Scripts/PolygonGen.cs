@@ -41,8 +41,8 @@ public class PolygonGen : MonoBehaviour
         {
             final = deviceR.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x;
 
-            double disp = 3 * (final - init);
-            n2 = n + (int)Math.Round(disp);
+            double disp = final - init;
+            n2 = n + (int)Math.Round(3 * disp);
 
             if(n2 >= 3)
                 polygon.GetComponent<MeshFilter>().mesh = PolyGen(n2, 0.06);   
@@ -50,7 +50,7 @@ public class PolygonGen : MonoBehaviour
 
         else if (deviceR.GetTouchUp(SteamVR_Controller.ButtonMask.Touchpad))
         {
-            if (n2 >= 3)
+            if (n2 != n && n2 >= 3)
             {
                 n = n2;
                 towerGen.BuildTower(n);
@@ -61,7 +61,7 @@ public class PolygonGen : MonoBehaviour
 
     Mesh PolyGen(int n, double r)
     {
-        double s = r * 2 * Math.Sin(Math.PI / n);
+        //double s = r * 2 * Math.Sin(Math.PI / n);
         double angle = Math.PI / 2;
         double angle_sym = (2 * Math.PI) / n;
 

@@ -14,8 +14,9 @@ public class ControlsNew : MonoBehaviour
 
     public GameObject prefab;
     public GameObject stuffToScale;
-    public float speed;
-
+    public float base_speed; 
+    
+    private float speed_R, speed_L;
     private float separation0;
     private float separation1;
     private float scaleFactor;
@@ -28,12 +29,11 @@ public class ControlsNew : MonoBehaviour
         originalScale = stuffToScale.transform.localScale;
     }
 
-    void ShootProjectile(Vector3 SpawnPos, Vector3 SpawnDirect)
+    void ShootProjectile(Transform controller, float speed)
     {
-        var shoot = GameObject.Instantiate(prefab);
-        var rb = shoot.GetComponent<Rigidbody>();
-        shoot.transform.position = SpawnPos;
-        rb.velocity = SpawnDirect * speed;
+        var direct = Quaternion.AngleAxis(45, controller.right) * controller.forward;
+        var shoot = GameObject.Instantiate(prefab, controller.position, controller.rotation);
+        shoot.GetComponent<Rigidbody>().velocity = speed * direct;
 
         GameObject.Destroy(shoot, 2);
     }
@@ -88,21 +88,30 @@ public class ControlsNew : MonoBehaviour
         var deviceL = SteamVR_Controller.Input((int)controllerL.index);
 
         if (deviceR.GetPressDown(SteamVR_Controller.ButtonMask.Trigger))
-        {
-            ShootProjectile(controllerModelR.transform.position, Quaternion.AngleAxis(45, controllerModelR.transform.right) * controllerModelR.transform.forward);
-        }
+            speed_R = base_speed;
 
-        else if (deviceL.GetPressDown(SteamVR_Controller.ButtonMask.Trigger))
-        {
-            ShootProjectile(controllerModelL.transform.position, Quaternion.AngleAxis(45, controllerModelL.transform.right) * controllerModelL.transform.forward);
-        }
+        if (deviceL.GetPressDown(SteamVR_Controller.ButtonMask.Trigger))
+            speed_L = base_speed;
 
-        else if (deviceR.GetPressDown(SteamVR_Controller.ButtonMask.ApplicationMenu) || deviceL.GetPressDown(SteamVR_Controller.ButtonMask.ApplicationMenu))
+        if (deviceR.GetPress(SteamVR_Controller.ButtonMask.Trigger))
+            speed_R += 0.25F;
+
+        if (deviceL.GetPress(SteamVR_Controller.ButtonMask.Trigger))
+            speed_L += 0.25F;
+
+        if (deviceR.GetPressUp(SteamVR_Controller.ButtonMask.Trigger))
+            ShootProjectile(controllerModelR.transform, speed_R);
+        
+        if (deviceL.GetPressUp(SteamVR_Controller.ButtonMask.Trigger))
+            ShootProjectile(controllerModelL.transform, speed_L);
+
+
+        if (deviceR.GetPressDown(SteamVR_Controller.ButtonMask.ApplicationMenu) || deviceL.GetPressDown(SteamVR_Controller.ButtonMask.ApplicationMenu))
         {
             ReloadScene();
         }
 
-        else if (deviceR.GetPressDown(SteamVR_Controller.ButtonMask.Grip) && deviceL.GetPressDown(SteamVR_Controller.ButtonMask.Grip))
+        if (deviceR.GetPressDown(SteamVR_Controller.ButtonMask.Grip) && deviceL.GetPressDown(SteamVR_Controller.ButtonMask.Grip))
         {
             FreezeTime(controllerR.transform.position, controllerL.transform.position);
         }
@@ -127,12 +136,12 @@ public class ControlsNew : MonoBehaviour
             UnfreezeTime();
         }
 
-        else if (deviceR.GetTouch(SteamVR_Controller.ButtonMask.Touchpad))
+        else if (deviceL.GetTouch(SteamVR_Controller.ButtonMask.Touchpad))
         {
-            TimeWarp(deviceR.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x);
+            TimeWarp(deviceL.GetAxis(Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad).x);
         }
 
-        else if (deviceR.GetTouchUp(SteamVR_Controller.ButtonMask.Touchpad))
+        else if (deviceL.GetTouchUp(SteamVR_Controller.ButtonMask.Touchpad))
         {
             TimeReset();
         }
