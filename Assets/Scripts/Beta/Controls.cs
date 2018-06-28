@@ -9,8 +9,19 @@ public class Controls : MonoBehaviour
     public SteamVR_TrackedObject controllerR;
     public SteamVR_TrackedObject controllerL;
 
+    public GameObject block;
     public GameObject projectile;
     public GameObject scaleOrigin;
+
+    public Material hologram;
+    public Material solid;
+
+    public float length;
+    public float width;
+    public float height;
+    public float offset;
+    public int nfloors;
+    public int nsides;
 
     public float base_speed;
     public float incr_speed;
@@ -23,25 +34,41 @@ public class Controls : MonoBehaviour
 
     const Valve.VR.EVRButtonId TouchpadID = Valve.VR.EVRButtonId.k_EButton_SteamVR_Touchpad;
 
+    bool BuildMode;
+    Tower tower;
+    Plane ground;
+
+    SteamVR_Controller.Device deviceR;
+    SteamVR_Controller.Device deviceL;
     float speed_R, speed_L;
     float init_sep;
     float init_timeStep;
     Vector3 init_scale;
-    float touchpad_X;
 
 	void Awake ()
     {
         init_timeStep = 1.0F / Screen.currentResolution.refreshRate;
         Time.fixedDeltaTime = init_timeStep;
 
+        BuildMode = true;
+        tower = null;
+        ground = new Plane(Vector3.up, new Vector3(0, 0, 0));
         init_scale = scaleOrigin.transform.localScale;		
 	}
 	
 	void Update ()
     {
-        SteamVR_Controller.Device deviceR = SteamVR_Controller.Input((int)controllerR.index);
-        SteamVR_Controller.Device deviceL = SteamVR_Controller.Input((int)controllerL.index);
+        deviceR = SteamVR_Controller.Input((int)controllerR.index);
+        deviceL = SteamVR_Controller.Input((int)controllerL.index);
 
+        if (BuildMode)
+            BuildControls();
+        else
+            ShootControls();
+    }
+
+    void ShootControls()
+    {
         if (deviceR.GetPressDown(Trigger))
             speed_R = base_speed;
         if (deviceL.GetPressDown(Trigger))
@@ -72,6 +99,43 @@ public class Controls : MonoBehaviour
             WarpTime(deviceL.GetAxis(TouchpadID).x);
         else if (deviceL.GetTouchUp(Touchpad))
             ResetTime();
+    }
+
+    void BuildControls()
+    {
+        Ray raycast;
+        float enter;
+
+        if(tower == null) {
+            if (deviceR.GetPressDown(Touchpad)) {
+                raycast = new Ray(controllerR.transform.position, controllerR.transform.forward);
+                enter = 0.0F;
+
+                if (ground.Raycast(raycast, out enter)) {
+                    //scaleOrigin.transform.position = raycast.GetPoint(enter);
+
+                    tower = new Tower(block, scaleOrigin, length, width, height, nsides, nfloors, offset);
+                    tower.EnablePhysics(false);
+                    tower.SetMaterial(hologram);
+                }
+            }
+        }
+
+        else if(!tower.placed) {
+            raycast = new Ray(controllerR.transform.position, controllerR.transform.forward);
+            enter = 0.0F;
+
+            if (ground.Raycast(raycast, out enter)) {
+                tower.origin.transform.position = raycast.GetPoint(enter);
+
+                if (deviceR.GetPressDown(Trigger)) {
+                    tower.SetMaterial(solid);
+                    tower.EnablePhysics(true);
+
+                    BuildMode = false;
+                }
+            }   
+        }       
     }
 
     float GetDistance(Transform trans_1, Transform trans_2)
@@ -129,7 +193,4 @@ public class Controls : MonoBehaviour
         Scene active_scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(active_scene.buildIndex, LoadSceneMode.Single);
     }
-
-
-
 }
