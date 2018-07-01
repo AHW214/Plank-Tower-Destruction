@@ -6,20 +6,32 @@ using System;
 public class Tower
 {
     public bool placed;
+    public bool Active
+    {
+        get { return origin.activeSelf; }
+        set { origin.SetActive(value);  }
+    }
     public GameObject origin;
+    public GameObject container;
+    public int nsides;
+    public int nfloors;
     GameObject[] floors;
     
     public Tower(GameObject block, GameObject org, float l, float w, float h, int s, int f, float off)
     {
+        placed = false;
+        origin = org;
+        container = new GameObject();
+        container.transform.position = Vector3.zero;
+        nsides = s;
+        nfloors = f;
+        floors = new GameObject[nfloors];
+
         Vector3 pos;
         Quaternion rot;
         float ext_angle;
 
-        placed = false;
-        origin = org;
-        floors = new GameObject[f];
-        
-        pos = origin.transform.position + new Vector3(0, h / 2, 0);
+        pos = new Vector3(0, h / 2, 0);
         rot = origin.transform.rotation;
         ext_angle = To_Deg(Math.PI / s);
         block.transform.localScale = new Vector3(l, h, w);
@@ -30,9 +42,8 @@ public class Tower
         float apothem;
 
         floors[0] = new GameObject("Floor 1");
-        floors[0].transform.SetParent(origin.transform);
+        floors[0].transform.SetParent(container.transform);
         apothem = Calc_Apoth(block.GetComponent<Renderer>().bounds.size.x, s);
-        Debug.Log(apothem);
 
         for (int i = 0; i < s; i++) {
             new_angle = 2 * i * ext_angle;
@@ -47,17 +58,19 @@ public class Tower
         for (int i = 1; i < f; i++) {
             rot *= Quaternion.Euler(0, ext_angle, 0);
 
-            floors[i] = GameObject.Instantiate(floors[0], pos, rot, origin.transform);
+            floors[i] = GameObject.Instantiate(floors[0], pos, rot, container.transform);
             floors[i].name = "Floor " + (i + 1);
 
             pos += new Vector3(0, h, 0);
         }
+
+        container.transform.position = origin.transform.position;
+        container.transform.SetParent(origin.transform);
     }
 
     public void EnablePhysics(bool b)
     {
-        if (b)
-            placed = true;
+        placed = b;
 
         Rigidbody[] blocks;
         for(int i = 0; i < floors.Length; i++) {
@@ -79,6 +92,11 @@ public class Tower
         }
     }
 
+    public void Despawn()
+    {
+        GameObject.Destroy(container);
+    }
+
     float To_Deg(double rad)
     {
         return (float)(rad * (180 / Math.PI));
@@ -87,7 +105,5 @@ public class Tower
     float Calc_Apoth(float length, int nsides)
     {
         return (float)(length / (2 * Math.Tan(Math.PI / nsides)));
-    }
-
-    
+    } 
 }

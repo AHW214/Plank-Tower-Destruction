@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.VR;
@@ -13,7 +14,6 @@ public class Controls : MonoBehaviour
     public GameObject projectile;
     public GameObject scaleOrigin;
 
-    public Material hologram;
     public Material solid;
 
     public float length;
@@ -45,7 +45,12 @@ public class Controls : MonoBehaviour
     float init_timeStep;
     Vector3 init_scale;
 
-	void Awake ()
+    double init_touchX, final_touchX;
+    double init_touchY, final_touchY;
+    int tmp_sides = 0, tmp_floors = 0;
+
+
+    void Awake ()
     {
         init_timeStep = 1.0F / Screen.currentResolution.refreshRate;
         Time.fixedDeltaTime = init_timeStep;
@@ -106,17 +111,15 @@ public class Controls : MonoBehaviour
         Ray raycast;
         float enter;
 
-        if(tower == null) {
+        if (tower == null) {
             if (deviceR.GetPressDown(Touchpad)) {
                 raycast = new Ray(controllerR.transform.position, controllerR.transform.forward);
                 enter = 0.0F;
 
                 if (ground.Raycast(raycast, out enter)) {
-                    //scaleOrigin.transform.position = raycast.GetPoint(enter);
+                    scaleOrigin.transform.position = raycast.GetPoint(enter);
 
                     tower = new Tower(block, scaleOrigin, length, width, height, nsides, nfloors, offset);
-                    tower.EnablePhysics(false);
-                    tower.SetMaterial(hologram);
                 }
             }
         }
@@ -126,6 +129,9 @@ public class Controls : MonoBehaviour
             enter = 0.0F;
 
             if (ground.Raycast(raycast, out enter)) {
+                if (!tower.Active)
+                    tower.Active = true;
+
                 tower.origin.transform.position = raycast.GetPoint(enter);
 
                 if (deviceR.GetPressDown(Trigger)) {
@@ -134,7 +140,46 @@ public class Controls : MonoBehaviour
 
                     BuildMode = false;
                 }
-            }   
+
+                if(deviceR.GetTouchDown(Touchpad)) {
+                    init_touchX = deviceR.GetAxis(TouchpadID).x;
+                    init_touchY = deviceR.GetAxis(TouchpadID).y;
+                }
+
+                else if (deviceR.GetTouch(Touchpad)) {
+                    final_touchX = deviceR.GetAxis(TouchpadID).x;
+                    final_touchY = deviceR.GetAxis(TouchpadID).y;
+
+                    double dispX = final_touchX - init_touchX;
+                    double dispY = final_touchY - init_touchY;
+                    double absX = Math.Abs(dispX);
+                    double absY = Math.Abs(dispY);
+
+                    if (absX >= 0.34F && absY < 0.34F) {
+                        if ((tmp_sides = nsides + (int)(3 * dispX)) >= 3) {
+                            tower.Despawn();
+                            tower = new Tower(block, scaleOrigin, length, width, height, tmp_sides, nfloors, offset);
+                        }
+                    }
+
+                    else if (absY >= 0.34F && absX < 0.34F) {
+                        if ((tmp_floors = nfloors + (int)(3 * dispY)) >= 1) {
+                            tower.Despawn();
+                            tower = new Tower(block, scaleOrigin, length, width, height, nsides, tmp_floors, offset);
+                        }
+                    }
+                }
+
+                else if (deviceR.GetTouchUp(Touchpad))
+                {
+                    if(tmp_sides >= 3)
+                        nsides = tmp_sides;
+                    if(tmp_floors >= 1)
+                        nfloors = tmp_floors;
+                }
+            }
+            else
+                tower.Active = false;
         }       
     }
 
